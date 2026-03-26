@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead Discovery Agent</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>Lead Discovery Agent</h1>
+            <p class="subtitle">Hitta organisationer som behöver stöd i AI-transformationen</p>
+        </div>
+    </header>
+
+    <main>
+        <!-- Söksektion -->
+        <section class="search-section">
+            <h2>Sök efter leads</h2>
+            <div class="search-controls">
+                <div class="search-row">
+                    <input type="text" id="searchInput" placeholder="Sök företag, bransch eller nyckelord..." />
+                    <button id="searchBtn" class="btn btn-primary">Sök</button>
+                </div>
+                <div class="filter-row">
+                    <select id="regionFilter">
+                        <option value="">Alla regioner</option>
+                        <option value="stockholm">Stockholm</option>
+                        <option value="goteborg">Göteborg</option>
+                        <option value="malmo">Malmö</option>
+                        <option value="ovriga">Övriga Sverige</option>
+                    </select>
+                    <select id="sizeFilter">
+                        <option value="">Alla storlekar</option>
+                        <option value="small">Litet (1-49)</option>
+                        <option value="medium">Medelstort (50-500)</option>
+                        <option value="large">Stort (500+)</option>
+                    </select>
+                    <select id="statusFilter">
+                        <option value="">Alla statusar</option>
+                        <option value="new">Ny</option>
+                        <option value="contacted">Kontaktad</option>
+                        <option value="meeting">Möte bokat</option>
+                        <option value="proposal">Offert skickad</option>
+                        <option value="closed">Avslutad</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- Statistik -->
+        <section class="stats-section">
+            <div class="stat-card">
+                <span class="stat-number" id="totalLeads">0</span>
+                <span class="stat-label">Totalt leads</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number" id="newLeads">0</span>
+                <span class="stat-label">Nya</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number" id="contactedLeads">0</span>
+                <span class="stat-label">Kontaktade</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-number" id="meetingLeads">0</span>
+                <span class="stat-label">Möte bokat</span>
+            </div>
+        </section>
+
+        <!-- Lägg till lead -->
+        <section class="add-section">
+            <button id="addLeadBtn" class="btn btn-secondary">+ Lägg till lead manuellt</button>
+            <div id="addLeadForm" class="add-form hidden">
+                <h3>Lägg till ny lead</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="companyName">Företagsnamn *</label>
+                        <input type="text" id="companyName" required />
+                    </div>
+                    <div class="form-group">
+                        <label for="industry">Bransch</label>
+                        <input type="text" id="industry" placeholder="T.ex. Tech, Finans, Offentlig sektor" />
+                    </div>
+                    <div class="form-group">
+                        <label for="region">Region</label>
+                        <select id="region">
+                            <option value="stockholm">Stockholm</option>
+                            <option value="goteborg">Göteborg</option>
+                            <option value="malmo">Malmö</option>
+                            <option value="ovriga">Övriga Sverige</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="companySize">Storlek</label>
+                        <select id="companySize">
+                            <option value="small">Litet (1-49)</option>
+                            <option value="medium">Medelstort (50-500)</option>
+                            <option value="large">Stort (500+)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="contactName">Kontaktperson</label>
+                        <input type="text" id="contactName" placeholder="Namn" />
+                    </div>
+                    <div class="form-group">
+                        <label for="contactRole">Roll</label>
+                        <input type="text" id="contactRole" placeholder="T.ex. HR-chef, CTO" />
+                    </div>
+                    <div class="form-group">
+                        <label for="contactEmail">E-post</label>
+                        <input type="email" id="contactEmail" />
+                    </div>
+                    <div class="form-group">
+                        <label for="contactLinkedin">LinkedIn</label>
+                        <input type="url" id="contactLinkedin" placeholder="https://linkedin.com/in/..." />
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="signals">AI-signaler</label>
+                        <textarea id="signals" placeholder="Varför är det här en bra lead? T.ex. annonserar AI-roller, uttalar sig om transformation..."></textarea>
+                    </div>
+                    <div class="form-group full-width">
+                        <label for="notes">Anteckningar</label>
+                        <textarea id="notes" placeholder="Övriga anteckningar..."></textarea>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button id="saveLeadBtn" class="btn btn-primary">Spara lead</button>
+                    <button id="cancelLeadBtn" class="btn btn-ghost">Avbryt</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Leadlista -->
+        <section class="leads-section">
+            <h2>Dina leads</h2>
+            <div id="leadsList" class="leads-list">
+                <p class="empty-state">Inga leads ännu. Lägg till din första lead ovan!</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Lead-detalj modal -->
+    <div id="leadModal" class="modal hidden">
+        <div class="modal-content">
+            <button class="modal-close" id="closeModal">&times;</button>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="app.js"></script>
+</body>
+</html>
