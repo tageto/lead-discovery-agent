@@ -61,8 +61,7 @@ loginBtn.addEventListener('click', async () => {
 });
 
 // Skapa konto
-const signupBtn = document.getElementById('signupBtn');
-signupBtn.addEventListener('click', async () => {
+async function handleSignup() {
     hideError();
     const email = loginEmail.value.trim();
     const password = loginPassword.value;
@@ -77,13 +76,21 @@ signupBtn.addEventListener('click', async () => {
         return;
     }
 
-    const { error } = await supabase.auth.signUp({ email, password });
-    if (error) {
-        showError(error.message);
-        return;
+    try {
+        const { data, error } = await supabase.auth.signUp({ email, password });
+        if (error) {
+            showError('Fel: ' + error.message);
+            return;
+        }
+        if (data.user) {
+            showApp();
+        } else {
+            showError('Kontot skapades men något gick fel. Försök logga in istället.');
+        }
+    } catch (e) {
+        showError('Oväntat fel: ' + e.message);
     }
-    showApp();
-});
+}
 
 loginPassword.addEventListener('keyup', (e) => {
     if (e.key === 'Enter') loginBtn.click();
