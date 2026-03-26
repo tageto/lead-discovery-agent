@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lead Discovery Agent</title>
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
     <!-- Inloggningssida -->
@@ -27,7 +28,7 @@
     </div>
 
     <!-- Huvudappen (dold tills inloggad) -->
-    <div id="appPage" class="hidden">
+    <div id="appPage" style="display:none;">
         <header>
             <div class="header-content">
                 <div style="display:flex;justify-content:space-between;align-items:center;">
@@ -41,7 +42,6 @@
         </header>
 
         <main>
-            <!-- Söksektion -->
             <section class="search-section">
                 <h2>Sök efter leads</h2>
                 <div class="search-controls">
@@ -75,7 +75,6 @@
                 </div>
             </section>
 
-            <!-- Statistik -->
             <section class="stats-section">
                 <div class="stat-card">
                     <span class="stat-number" id="totalLeads">0</span>
@@ -95,7 +94,6 @@
                 </div>
             </section>
 
-            <!-- Lägg till lead -->
             <section class="add-section">
                 <button id="addLeadBtn" class="btn btn-secondary">+ Lägg till lead manuellt</button>
                 <div id="addLeadForm" class="add-form hidden">
@@ -158,7 +156,6 @@
                 </div>
             </section>
 
-            <!-- Leadlista -->
             <section class="leads-section">
                 <h2>Dina leads</h2>
                 <div id="leadsList" class="leads-list">
@@ -168,7 +165,6 @@
         </main>
     </div>
 
-    <!-- Lead-detalj modal -->
     <div id="leadModal" class="modal hidden">
         <div class="modal-content">
             <button class="modal-close" id="closeModal">&times;</button>
@@ -176,7 +172,119 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="app.js"></script>
+    <script>
+    // === ALLT I ETT STÄLLE ===
+    var SUPABASE_URL = 'https://fiijkoaqqhhwzmfymrjb.supabase.co';
+    var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZpaWprb2FxcWhod3ptZnltcmpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ1MTMwNjUsImV4cCI6MjA5MDA4OTA2NX0.sxzzXxcHJOkpxL4ONFvJ_ih2hYHRspiP1pkDlTjziQA';
+    var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    var leads = [];
+
+    // --- INLOGGNING ---
+    document.getElementById('signupBtn').addEventListener('click', function() {
+        var errBox = document.getElementById('loginError');
+        errBox.classList.add('hidden');
+        var email = document.getElementById('loginEmail').value.trim();
+        var pw = document.getElementById('loginPassword').value;
+        if (!email || !pw) { errBox.textContent = 'Fyll i både e-post och lösenord.'; errBox.classList.remove('hidden'); return; }
+        if (pw.length < 6) { errBox.textContent = 'Lösenordet måste vara minst 6 tecken.'; errBox.classList.remove('hidden'); return; }
+        sb.auth.signUp({ email: email, password: pw }).then(function(res) {
+            if (res.error) { errBox.textContent = 'Fel: ' + res.error.message; errBox.classList.remove('hidden'); return; }
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('appPage').style.display = 'block';
+            loadLeads();
+        });
+    });
+
+    document.getElementById('loginBtn').addEventListener('click', function() {
+        var errBox = document.getElementById('loginError');
+        errBox.classList.add('hidden');
+        var email = document.getElementById('loginEmail').value.trim();
+        var pw = document.getElementById('loginPassword').value;
+        if (!email || !pw) { errBox.textContent = 'Fyll i både e-post och lösenord.'; errBox.classList.remove('hidden'); return; }
+        sb.auth.signInWithPassword({ email: email, password: pw }).then(function(res) {
+            if (res.error) { errBox.textContent = 'Fel e-post eller lösenord.'; errBox.classList.remove('hidden'); return; }
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('appPage').style.display = 'block';
+            loadLeads();
+        });
+    });
+
+    document.getElementById('loginPassword').addEventListener('keyup', function(e) { if (e.key === 'Enter') document.getElementById('loginBtn').click(); });
+    document.getElementById('logoutBtn').addEventListener('click', function() { sb.auth.signOut().then(function() { location.reload(); }); });
+
+    // Kolla session
+    sb.auth.getSession().then(function(r) {
+        if (r.data.session) {
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('appPage').style.display = 'block';
+            loadLeads();
+        }
+    });
+
+    // --- LEADS ---
+    function loadLeads() {
+        sb.from('leads').select('*').order('created_at', { ascending: false }).then(function(res) {
+            if (res.error) return;
+            leads = res.data.map(function(r) {
+                return { id:r.id, company:r.company, industry:r.industry, region:r.region, size:r.size, contactName:r.contact_name, contactRole:r.contact_role, contactEmail:r.contact_email, contactLinkedin:r.contact_linkedin, signals:r.signals, notes:r.notes, status:r.status, created:r.created_at };
+            });
+            updateStats();
+            renderLeads();
+        });
+    }
+
+    function updateStats() {
+        document.getElementById('totalLeads').textContent = leads.length;
+        document.getElementById('newLeads').textContent = leads.filter(function(l){return l.status==='new';}).length;
+        document.getElementById('contactedLeads').textContent = leads.filter(function(l){return l.status==='contacted';}).length;
+        document.getElementById('meetingLeads').textContent = leads.filter(function(l){return l.status==='meeting';}).length;
+    }
+
+    function renderLeads() {
+        var s = document.getElementById('searchInput').value.toLowerCase();
+        var reg = document.getElementById('regionFilter').value;
+        var sz = document.getElementById('sizeFilter').value;
+        var st = document.getElementById('statusFilter').value;
+        var f = leads.filter(function(l) {
+            if (s && !(l.company+' '+l.industry+' '+l.signals+' '+l.contactName+' '+l.contactRole).toLowerCase().includes(s)) return false;
+            if (reg && l.region!==reg) return false;
+            if (sz && l.size!==sz) return false;
+            if (st && l.status!==st) return false;
+            return true;
+        });
+        var ll = document.getElementById('leadsList');
+        if (!f.length) { ll.innerHTML='<p class="empty-state">Inga leads ännu. Lägg till din första lead ovan!</p>'; return; }
+        var sl={new:'Ny',contacted:'Kontaktad',meeting:'Möte bokat',proposal:'Offert skickad',closed:'Avslutad'};
+        var rl={stockholm:'Stockholm',goteborg:'Göteborg',malmo:'Malmö',ovriga:'Övriga Sverige'};
+        var szl={small:'Litet',medium:'Medelstort',large:'Stort'};
+        ll.innerHTML=f.map(function(l){return '<div class="lead-card" data-id="'+l.id+'"><div class="lead-info"><h3>'+l.company+'</h3><div class="lead-meta">'+(l.industry?'<span>'+l.industry+'</span>':'')+'<span>'+(rl[l.region]||'')+'</span><span>'+(szl[l.size]||'')+'</span>'+(l.contactName?'<span>'+l.contactName+(l.contactRole?' — '+l.contactRole:'')+'</span>':'')+'</div></div><div class="lead-actions"><span class="status-badge status-'+l.status+'">'+sl[l.status]+'</span><button class="btn btn-ghost btn-small delete-btn" data-id="'+l.id+'">&times;</button></div></div>';}).join('');
+        document.querySelectorAll('.lead-card').forEach(function(c){c.addEventListener('click',function(e){if(e.target.classList.contains('delete-btn'))return;var l=leads.find(function(x){return x.id===c.dataset.id;});if(l)showDetail(l);});});
+        document.querySelectorAll('.delete-btn').forEach(function(b){b.addEventListener('click',function(e){e.stopPropagation();if(confirm('Ta bort?')){sb.from('leads').delete().eq('id',b.dataset.id).then(function(){loadLeads();});}});});
+    }
+
+    function showDetail(l) {
+        var sl={new:'Ny',contacted:'Kontaktad',meeting:'Möte bokat',proposal:'Offert skickad',closed:'Avslutad'};
+        var rl={stockholm:'Stockholm',goteborg:'Göteborg',malmo:'Malmö',ovriga:'Övriga Sverige'};
+        var szl={small:'Litet (1-49)',medium:'Medelstort (50-500)',large:'Stort (500+)'};
+        document.getElementById('modalBody').innerHTML='<div class="modal-detail"><h2>'+l.company+'</h2><div class="detail-grid"><span class="detail-label">Bransch</span><span class="detail-value">'+(l.industry||'—')+'</span><span class="detail-label">Region</span><span class="detail-value">'+(rl[l.region]||'—')+'</span><span class="detail-label">Storlek</span><span class="detail-value">'+(szl[l.size]||'—')+'</span><span class="detail-label">Status</span><span class="detail-value"><span class="status-badge status-'+l.status+'">'+sl[l.status]+'</span></span></div>'+(l.contactName?'<div class="detail-section"><h3>Kontaktperson</h3><div class="detail-grid"><span class="detail-label">Namn</span><span class="detail-value">'+l.contactName+'</span>'+(l.contactRole?'<span class="detail-label">Roll</span><span class="detail-value">'+l.contactRole+'</span>':'')+(l.contactEmail?'<span class="detail-label">E-post</span><span class="detail-value"><a href="mailto:'+l.contactEmail+'">'+l.contactEmail+'</a></span>':'')+(l.contactLinkedin?'<span class="detail-label">LinkedIn</span><span class="detail-value"><a href="'+l.contactLinkedin+'" target="_blank">Öppna profil</a></span>':'')+'</div></div>':'')+(l.signals?'<div class="detail-section"><h3>AI-signaler</h3><p>'+l.signals+'</p></div>':'')+(l.notes?'<div class="detail-section"><h3>Anteckningar</h3><p>'+l.notes+'</p></div>':'')+'<div class="modal-actions"><label style="font-size:0.9rem;font-weight:500;color:#374151;margin-right:0.5rem;">Ändra status:</label><select id="mss"><option value="new"'+(l.status==='new'?' selected':'')+'>Ny</option><option value="contacted"'+(l.status==='contacted'?' selected':'')+'>Kontaktad</option><option value="meeting"'+(l.status==='meeting'?' selected':'')+'>Möte bokat</option><option value="proposal"'+(l.status==='proposal'?' selected':'')+'>Offert skickad</option><option value="closed"'+(l.status==='closed'?' selected':'')+'>Avslutad</option></select></div></div>';
+        document.getElementById('mss').addEventListener('change',function(e){sb.from('leads').update({status:e.target.value}).eq('id',l.id).then(function(){loadLeads();});});
+        document.getElementById('leadModal').classList.remove('hidden');
+    }
+
+    document.getElementById('addLeadBtn').addEventListener('click',function(){document.getElementById('addLeadForm').classList.toggle('hidden');});
+    document.getElementById('cancelLeadBtn').addEventListener('click',function(){document.getElementById('addLeadForm').classList.add('hidden');});
+    document.getElementById('saveLeadBtn').addEventListener('click',function(){
+        var c=document.getElementById('companyName').value.trim();
+        if(!c){alert('Ange företagsnamn.');return;}
+        sb.from('leads').insert([{company:c,industry:document.getElementById('industry').value.trim(),region:document.getElementById('region').value,size:document.getElementById('companySize').value,contact_name:document.getElementById('contactName').value.trim(),contact_role:document.getElementById('contactRole').value.trim(),contact_email:document.getElementById('contactEmail').value.trim(),contact_linkedin:document.getElementById('contactLinkedin').value.trim(),signals:document.getElementById('signals').value.trim(),notes:document.getElementById('notes').value.trim(),status:'new'}]).then(function(r){if(r.error){alert('Fel vid sparning.');return;}loadLeads();document.getElementById('addLeadForm').classList.add('hidden');document.getElementById('companyName').value='';document.getElementById('industry').value='';document.getElementById('contactName').value='';document.getElementById('contactRole').value='';document.getElementById('contactEmail').value='';document.getElementById('contactLinkedin').value='';document.getElementById('signals').value='';document.getElementById('notes').value='';});
+    });
+    document.getElementById('closeModal').addEventListener('click',function(){document.getElementById('leadModal').classList.add('hidden');});
+    document.getElementById('leadModal').addEventListener('click',function(e){if(e.target===document.getElementById('leadModal'))document.getElementById('leadModal').classList.add('hidden');});
+    document.getElementById('searchBtn').addEventListener('click',renderLeads);
+    document.getElementById('searchInput').addEventListener('keyup',function(e){if(e.key==='Enter')renderLeads();});
+    document.getElementById('regionFilter').addEventListener('change',renderLeads);
+    document.getElementById('sizeFilter').addEventListener('change',renderLeads);
+    document.getElementById('statusFilter').addEventListener('change',renderLeads);
+    </script>
 </body>
 </html>
