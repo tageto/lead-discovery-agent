@@ -41,29 +41,7 @@ supabase.auth.getSession().then(({ data: { session } }) => {
     }
 });
 
-// Logga in eller skapa konto
-let isSignup = false;
-
-document.getElementById('signupLink').addEventListener('click', (e) => {
-    e.preventDefault();
-    isSignup = true;
-    loginBtn.textContent = 'Skapa konto';
-    document.getElementById('signupHint').innerHTML = 'Har du redan konto? <a href="#" id="backToLogin">Logga in</a>';
-    document.getElementById('backToLogin').addEventListener('click', (e) => {
-        e.preventDefault();
-        isSignup = false;
-        loginBtn.textContent = 'Logga in';
-        document.getElementById('signupHint').innerHTML = 'Inget konto? <a href="#" id="signupLink2">Skapa konto</a>';
-        document.getElementById('signupLink2').addEventListener('click', (ev) => {
-            ev.preventDefault();
-            isSignup = true;
-            loginBtn.textContent = 'Skapa konto';
-        });
-        hideError();
-    });
-    hideError();
-});
-
+// Logga in
 loginBtn.addEventListener('click', async () => {
     hideError();
     const email = loginEmail.value.trim();
@@ -74,25 +52,37 @@ loginBtn.addEventListener('click', async () => {
         return;
     }
 
-    if (isSignup) {
-        if (password.length < 6) {
-            showError('Lösenordet måste vara minst 6 tecken.');
-            return;
-        }
-        const { error } = await supabase.auth.signUp({ email, password });
-        if (error) {
-            showError(error.message);
-            return;
-        }
-        showApp();
-    } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) {
-            showError('Fel e-post eller lösenord. Försök igen.');
-            return;
-        }
-        showApp();
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+        showError('Fel e-post eller lösenord. Försök igen.');
+        return;
     }
+    showApp();
+});
+
+// Skapa konto
+const signupBtn = document.getElementById('signupBtn');
+signupBtn.addEventListener('click', async () => {
+    hideError();
+    const email = loginEmail.value.trim();
+    const password = loginPassword.value;
+
+    if (!email || !password) {
+        showError('Fyll i både e-post och lösenord.');
+        return;
+    }
+
+    if (password.length < 6) {
+        showError('Lösenordet måste vara minst 6 tecken.');
+        return;
+    }
+
+    const { error } = await supabase.auth.signUp({ email, password });
+    if (error) {
+        showError(error.message);
+        return;
+    }
+    showApp();
 });
 
 loginPassword.addEventListener('keyup', (e) => {
