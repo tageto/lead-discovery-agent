@@ -5,6 +5,109 @@ const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let leads = [];
 
+// === Inloggning ===
+const loginPage = document.getElementById('loginPage');
+const appPage = document.getElementById('appPage');
+const loginBtn = document.getElementById('loginBtn');
+const loginEmail = document.getElementById('loginEmail');
+const loginPassword = document.getElementById('loginPassword');
+const loginError = document.getElementById('loginError');
+const logoutBtn = document.getElementById('logoutBtn');
+
+function showError(msg) {
+    loginError.textContent = msg;
+    loginError.classList.remove('hidden');
+}
+
+function hideError() {
+    loginError.classList.add('hidden');
+}
+
+function showApp() {
+    loginPage.classList.add('hidden');
+    appPage.classList.remove('hidden');
+    loadLeads();
+}
+
+function showLogin() {
+    loginPage.classList.remove('hidden');
+    appPage.classList.add('hidden');
+}
+
+// Kolla om redan inloggad
+supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session) {
+        showApp();
+    }
+});
+
+// Logga in eller skapa konto
+let isSignup = false;
+
+document.getElementById('signupLink').addEventListener('click', (e) => {
+    e.preventDefault();
+    isSignup = true;
+    loginBtn.textContent = 'Skapa konto';
+    document.getElementById('signupHint').innerHTML = 'Har du redan konto? <a href="#" id="backToLogin">Logga in</a>';
+    document.getElementById('backToLogin').addEventListener('click', (e) => {
+        e.preventDefault();
+        isSignup = false;
+        loginBtn.textContent = 'Logga in';
+        document.getElementById('signupHint').innerHTML = 'Inget konto? <a href="#" id="signupLink2">Skapa konto</a>';
+        document.getElementById('signupLink2').addEventListener('click', (ev) => {
+            ev.preventDefault();
+            isSignup = true;
+            loginBtn.textContent = 'Skapa konto';
+        });
+        hideError();
+    });
+    hideError();
+});
+
+loginBtn.addEventListener('click', async () => {
+    hideError();
+    const email = loginEmail.value.trim();
+    const password = loginPassword.value;
+
+    if (!email || !password) {
+        showError('Fyll i både e-post och lösenord.');
+        return;
+    }
+
+    if (isSignup) {
+        if (password.length < 6) {
+            showError('Lösenordet måste vara minst 6 tecken.');
+            return;
+        }
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) {
+            showError(error.message);
+            return;
+        }
+        showApp();
+    } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) {
+            showError('Fel e-post eller lösenord. Försök igen.');
+            return;
+        }
+        showApp();
+    }
+});
+
+loginPassword.addEventListener('keyup', (e) => {
+    if (e.key === 'Enter') loginBtn.click();
+});
+
+loginEmail.addEventListener('keyup', (e) => {
+    if (e.key === 'Enter') loginPassword.focus();
+});
+
+logoutBtn.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    showLogin();
+});
+
 // === Element ===
 const searchInput = document.getElementById('searchInput');
 const searchBtn = document.getElementById('searchBtn');
@@ -32,7 +135,6 @@ async function loadLeads() {
         return;
     }
 
-    // Konvertera databasnamn till JavaScript-namn
     leads = data.map(row => ({
         id: row.id,
         company: row.company,
@@ -120,7 +222,6 @@ function renderLeads() {
         </div>
     `).join('');
 
-    // Klick på lead-kort öppnar detaljer
     document.querySelectorAll('.lead-card').forEach(card => {
         card.addEventListener('click', (e) => {
             if (e.target.classList.contains('delete-btn')) return;
@@ -129,7 +230,6 @@ function renderLeads() {
         });
     });
 
-    // Ta bort-knappar
     document.querySelectorAll('.delete-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
@@ -216,7 +316,6 @@ function showLeadDetail(lead) {
         </div>
     `;
 
-    // Status-ändring
     document.getElementById('modalStatusSelect').addEventListener('change', async (e) => {
         await supabase.from('leads').update({ status: e.target.value }).eq('id', lead.id);
         await loadLeads();
@@ -300,6 +399,3 @@ searchInput.addEventListener('keyup', (e) => {
 regionFilter.addEventListener('change', renderLeads);
 sizeFilter.addEventListener('change', renderLeads);
 statusFilter.addEventListener('change', renderLeads);
-
-// === Starta ===
-loadLeads();
