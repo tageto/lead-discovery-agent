@@ -266,9 +266,54 @@
         var sl={new:'Ny',contacted:'Kontaktad',meeting:'Möte bokat',proposal:'Offert skickad',closed:'Avslutad'};
         var rl={stockholm:'Stockholm',goteborg:'Göteborg',malmo:'Malmö',ovriga:'Övriga Sverige'};
         var szl={small:'Litet (1-49)',medium:'Medelstort (50-500)',large:'Stort (500+)'};
-        document.getElementById('modalBody').innerHTML='<div class="modal-detail"><h2>'+l.company+'</h2><div class="detail-grid"><span class="detail-label">Bransch</span><span class="detail-value">'+(l.industry||'—')+'</span><span class="detail-label">Region</span><span class="detail-value">'+(rl[l.region]||'—')+'</span><span class="detail-label">Storlek</span><span class="detail-value">'+(szl[l.size]||'—')+'</span><span class="detail-label">Status</span><span class="detail-value"><span class="status-badge status-'+l.status+'">'+sl[l.status]+'</span></span></div>'+(l.contactName?'<div class="detail-section"><h3>Kontaktperson</h3><div class="detail-grid"><span class="detail-label">Namn</span><span class="detail-value">'+l.contactName+'</span>'+(l.contactRole?'<span class="detail-label">Roll</span><span class="detail-value">'+l.contactRole+'</span>':'')+(l.contactEmail?'<span class="detail-label">E-post</span><span class="detail-value"><a href="mailto:'+l.contactEmail+'">'+l.contactEmail+'</a></span>':'')+(l.contactLinkedin?'<span class="detail-label">LinkedIn</span><span class="detail-value"><a href="'+l.contactLinkedin+'" target="_blank">Öppna profil</a></span>':'')+'</div></div>':'')+(l.signals?'<div class="detail-section"><h3>AI-signaler</h3><p>'+l.signals+'</p></div>':'')+(l.notes?'<div class="detail-section"><h3>Anteckningar</h3><p>'+l.notes+'</p></div>':'')+'<div class="modal-actions"><label style="font-size:0.9rem;font-weight:500;color:#374151;margin-right:0.5rem;">Ändra status:</label><select id="mss"><option value="new"'+(l.status==='new'?' selected':'')+'>Ny</option><option value="contacted"'+(l.status==='contacted'?' selected':'')+'>Kontaktad</option><option value="meeting"'+(l.status==='meeting'?' selected':'')+'>Möte bokat</option><option value="proposal"'+(l.status==='proposal'?' selected':'')+'>Offert skickad</option><option value="closed"'+(l.status==='closed'?' selected':'')+'>Avslutad</option></select></div></div>';
-        document.getElementById('mss').addEventListener('change',function(e){sb.from('leads').update({status:e.target.value}).eq('id',l.id).then(function(){loadLeads();});});
+        var viewHTML='<div class="modal-detail"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;"><h2 style="margin:0;">'+l.company+'</h2><button id="editLeadBtn" class="btn btn-secondary btn-small">Redigera</button></div><div class="detail-grid"><span class="detail-label">Bransch</span><span class="detail-value">'+(l.industry||'—')+'</span><span class="detail-label">Region</span><span class="detail-value">'+(rl[l.region]||'—')+'</span><span class="detail-label">Storlek</span><span class="detail-value">'+(szl[l.size]||'—')+'</span><span class="detail-label">Status</span><span class="detail-value"><span class="status-badge status-'+l.status+'">'+sl[l.status]+'</span></span></div>'+(l.contactName?'<div class="detail-section"><h3>Kontaktperson</h3><div class="detail-grid"><span class="detail-label">Namn</span><span class="detail-value">'+l.contactName+'</span>'+(l.contactRole?'<span class="detail-label">Roll</span><span class="detail-value">'+l.contactRole+'</span>':'')+(l.contactEmail?'<span class="detail-label">E-post</span><span class="detail-value"><a href="mailto:'+l.contactEmail+'">'+l.contactEmail+'</a></span>':'')+(l.contactLinkedin?'<span class="detail-label">LinkedIn</span><span class="detail-value"><a href="'+l.contactLinkedin+'" target="_blank">Öppna profil</a></span>':'')+'</div></div>':'')+(l.signals?'<div class="detail-section"><h3>AI-signaler</h3><p>'+l.signals+'</p></div>':'')+(l.notes?'<div class="detail-section"><h3>Anteckningar</h3><p>'+l.notes+'</p></div>':'')+'<div class="modal-actions"><label style="font-size:0.9rem;font-weight:500;color:#374151;margin-right:0.5rem;">Ändra status:</label><select id="mss"><option value="new"'+(l.status==='new'?' selected':'')+'>Ny</option><option value="contacted"'+(l.status==='contacted'?' selected':'')+'>Kontaktad</option><option value="meeting"'+(l.status==='meeting'?' selected':'')+'>Möte bokat</option><option value="proposal"'+(l.status==='proposal'?' selected':'')+'>Offert skickad</option><option value="closed"'+(l.status==='closed'?' selected':'')+'>Avslutad</option></select></div></div>';
+        document.getElementById('modalBody').innerHTML=viewHTML;
+        document.getElementById('mss').addEventListener('change',function(e){sb.from('leads').update({status:e.target.value}).eq('id',l.id).then(function(){l.status=e.target.value;loadLeads();});});
+        document.getElementById('editLeadBtn').addEventListener('click',function(){showEditForm(l);});
         document.getElementById('leadModal').classList.remove('hidden');
+    }
+
+    function showEditForm(l) {
+        var html='<div class="modal-detail"><h2>Redigera lead</h2><div class="form-grid">'
+            +'<div class="form-group"><label>Företagsnamn *</label><input type="text" id="editCompany" value="'+(l.company||'').replace(/"/g,'&quot;')+'" /></div>'
+            +'<div class="form-group"><label>Bransch</label><input type="text" id="editIndustry" value="'+(l.industry||'').replace(/"/g,'&quot;')+'" /></div>'
+            +'<div class="form-group"><label>Region</label><select id="editRegion"><option value="stockholm"'+(l.region==='stockholm'?' selected':'')+'>Stockholm</option><option value="goteborg"'+(l.region==='goteborg'?' selected':'')+'>Göteborg</option><option value="malmo"'+(l.region==='malmo'?' selected':'')+'>Malmö</option><option value="ovriga"'+(l.region==='ovriga'?' selected':'')+'>Övriga Sverige</option></select></div>'
+            +'<div class="form-group"><label>Storlek</label><select id="editSize"><option value="small"'+(l.size==='small'?' selected':'')+'>Litet (1-49)</option><option value="medium"'+(l.size==='medium'?' selected':'')+'>Medelstort (50-500)</option><option value="large"'+(l.size==='large'?' selected':'')+'>Stort (500+)</option></select></div>'
+            +'<div class="form-group"><label>Kontaktperson</label><input type="text" id="editContactName" value="'+(l.contactName||'').replace(/"/g,'&quot;')+'" /></div>'
+            +'<div class="form-group"><label>Roll</label><input type="text" id="editContactRole" value="'+(l.contactRole||'').replace(/"/g,'&quot;')+'" /></div>'
+            +'<div class="form-group"><label>E-post</label><input type="email" id="editContactEmail" value="'+(l.contactEmail||'').replace(/"/g,'&quot;')+'" /></div>'
+            +'<div class="form-group"><label>LinkedIn</label><input type="url" id="editContactLinkedin" value="'+(l.contactLinkedin||'').replace(/"/g,'&quot;')+'" /></div>'
+            +'<div class="form-group full-width"><label>AI-signaler</label><textarea id="editSignals">'+(l.signals||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</textarea></div>'
+            +'<div class="form-group full-width"><label>Anteckningar</label><textarea id="editNotes">'+(l.notes||'').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</textarea></div>'
+            +'<div class="form-group"><label>Status</label><select id="editStatus"><option value="new"'+(l.status==='new'?' selected':'')+'>Ny</option><option value="contacted"'+(l.status==='contacted'?' selected':'')+'>Kontaktad</option><option value="meeting"'+(l.status==='meeting'?' selected':'')+'>Möte bokat</option><option value="proposal"'+(l.status==='proposal'?' selected':'')+'>Offert skickad</option><option value="closed"'+(l.status==='closed'?' selected':'')+'>Avslutad</option></select></div>'
+            +'</div><div class="form-actions"><button id="saveEditBtn" class="btn btn-primary">Spara</button><button id="cancelEditBtn" class="btn btn-ghost">Avbryt</button></div></div>';
+        document.getElementById('modalBody').innerHTML=html;
+        document.getElementById('cancelEditBtn').addEventListener('click',function(){showDetail(l);});
+        document.getElementById('saveEditBtn').addEventListener('click',function(){
+            var company=document.getElementById('editCompany').value.trim();
+            if(!company){alert('Ange företagsnamn.');return;}
+            var updated={
+                company:company,
+                industry:document.getElementById('editIndustry').value.trim(),
+                region:document.getElementById('editRegion').value,
+                size:document.getElementById('editSize').value,
+                contact_name:document.getElementById('editContactName').value.trim(),
+                contact_role:document.getElementById('editContactRole').value.trim(),
+                contact_email:document.getElementById('editContactEmail').value.trim(),
+                contact_linkedin:document.getElementById('editContactLinkedin').value.trim(),
+                signals:document.getElementById('editSignals').value.trim(),
+                notes:document.getElementById('editNotes').value.trim(),
+                status:document.getElementById('editStatus').value
+            };
+            sb.from('leads').update(updated).eq('id',l.id).then(function(res){
+                if(res.error){alert('Fel vid sparning: '+res.error.message);return;}
+                l.company=updated.company;l.industry=updated.industry;l.region=updated.region;l.size=updated.size;
+                l.contactName=updated.contact_name;l.contactRole=updated.contact_role;l.contactEmail=updated.contact_email;
+                l.contactLinkedin=updated.contact_linkedin;l.signals=updated.signals;l.notes=updated.notes;l.status=updated.status;
+                loadLeads();
+                showDetail(l);
+            });
+        });
     }
 
     document.getElementById('addLeadBtn').addEventListener('click',function(){document.getElementById('addLeadForm').classList.toggle('hidden');});
